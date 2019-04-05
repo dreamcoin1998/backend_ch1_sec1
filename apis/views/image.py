@@ -4,11 +4,12 @@ import os
 import utils
 from django.views import View
 import hashlib
+from utils.response import ReturnCode
 
 def image(request):
     if request.method == 'GET':
         md5 = request.GET.get('md5') # 解析get请求中的md5参数中的文件名
-        imgfile = os.path.join(settings.IMAGES_DIR, md5 + '.png') # 图片资源在服务中存放的位置
+        imgfile = os.path.join(settings.IMAGES_DIR, md5 + '.jpg') # 图片资源在服务中存放的位置
         if not os.path.exists(imgfile):
             return Http404
         else:
@@ -20,13 +21,14 @@ def image(request):
 class ImageView(View, utils.response.CommonResponseMixin): # 定义一个类视图，将会根据请求方式选择使用方法, 继承一个Mixin类
     def get(self, request):
         md5 = request.GET.get('md5')  # 解析get请求中的md5参数中的文件名
-        imgfile = os.path.join(settings.IMAGES_DIR, md5 + '.png')  # 图片资源在服务中存放的位置
-        if not os.path.exists(imgfile):
-            return Http404
-        else:
+        imgfile = os.path.join(settings.IMAGES_DIR, md5 + '.jpg')  # 图片资源在服务中存放的位置
+        if  os.path.exists(imgfile):
             data = open(imgfile, 'rb').read()
+            return FileResponse(open(imgfile, 'rb'), content_type='image/jpg')
+        else:
+            response = self.wrap_json_response(code=ReturnCode.RESOURCE_NOT_FOUND)
             # return HttpResponse(content=data, content_type='image/png') # 如果不加content_type会直接以二进制流传输，无法分辨它的文件类型
-            return FileResponse(open(imgfile, 'rb'), content_type='image/png')
+            return JsonResponse(data=response, safe=False)
 
     def post(self, request):
         file = request.FILES
@@ -43,7 +45,7 @@ class ImageView(View, utils.response.CommonResponseMixin): # 定义一个类视�
             })
         message = 'post method success.'
         # response = utils.response.wrap_json_response(message=message)
-        response = self.wrap_json_response(message=message) # 通过类方法直接调用wrap_json_response方法，不需要再进行导入
+        response = self.wrap_json_response(data=response, code=ReturnCode.SUCCESS) # 通过类方法直接调用wrap_json_response方法，不需要再进行导入
         return JsonResponse(data=response,safe=False)
 
     def put(self, request):
@@ -68,7 +70,7 @@ class ImageView(View, utils.response.CommonResponseMixin): # 定义一个类视�
 def image_text(request):
     if request.method == 'GET':
         md5 = request.GET.get('md5')
-        imgfile = os.path.join(settings.IMAGES_DIR, md5 + '.png')
+        imgfile = os.path.join(settings.IMAGES_DIR, md5 + '.jpg')
         if not os.path.exists(imgfile):
             return utils.response.wrap_json_response(code=utils.response.ReturnCode.RESOURCES_NOT_EXISTS)
         else:
@@ -77,3 +79,16 @@ def image_text(request):
             response_data['url'] = '/service/image?md5=%s' % (md5)
             response = utils.response.wrap_json_response(data=response_data)
             return JsonResponse(data=response, safe=False)
+
+
+class ImageListView(View, utils.response.CommonResponseMixin):
+    def get(self, request):
+        image_files = os.listdir(settings.IMAGES_DIR)
+        response_data = []
+        for image_file in image_files:
+            response_data.append({
+                'name': image_file,
+                'md5': image_file[:-4],
+            })
+        response = self.wrap_json_response(data=response_data)
+        return JsonResponse(data=response)

@@ -6,6 +6,13 @@ published:
       publish_date: 2018-10-01
       url: /service/weather
       desc: this si a weather app.
+  - app:
+      category: beifen
+      application: beifen
+      name: 图片备份
+      publish_date: 2019-04-05
+      url: /service/image
+      desc: this si a image beifen app.
 
 developing:
   - app:
